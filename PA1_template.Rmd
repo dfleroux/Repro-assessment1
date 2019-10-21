@@ -1,0 +1,208 @@
+---
+title: "PA1_template" 
+author: "Denis Leroux"
+date: "16/10/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## COURSERA Reproducible Research Peer Assessment Project 1
+
+Data downloaded from https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip website
+Activity data downloaded into MasterDataFile "MDF"
+Process/transform the data from 'factor' to 'date'
+
+
+```{r loaddata}
+path_main="C:/Users/lerouxd/Desktop/COURSERA-Repro"
+setwd(path_main)
+
+library(stats)
+library(xtable)
+# Activity data downloaded into MasterDataFile "MDF"
+MDF=read.csv(paste(path_main,"/activity.csv",sep=""))
+
+#Process/transform the data from 'factor' to 'date'
+MDF$date = as.Date(MDF$date,"%Y-%m-%d")
+```
+
+Total steps per day
+```{r total steps per day }
+table=table(MDF$date)
+SPD=NULL
+for (i in 1:length(table)) {
+   SPD[i] = sum(MDF[MDF$date==names(table[i]),][,1],na.rm=T)    
+}
+barplot(SPD, names.arg  = levels(MDF$date), main = "Total number of steps taken per day", xlab = "Total Steps",las=2 , cex.names=0.5)
+```
+
+
+Mean and median total number of steps taken per day====
+
+```{r mean and median SPD}
+Mean_per_day=NULL; Median_per_day=NULL;Summary=NULL;Summary2=NULL
+
+for (i in 1:length(table)) {
+   Summary[[i]]= summary(MDF[MDF$date==names(table[i]),][,1], na.rm=T)
+}
+
+Mean_per_day = unlist(lapply(Summary,"[", 4)); names(Mean_per_day) = levels(MDF$date)
+Median_per_day = unlist(lapply(Summary,"[", 3)); names(Median_per_day) = levels(MDF$date)
+
+print("Mean_per_day")
+print(Mean_per_day)
+
+print("Median_per_day")
+print(Median_per_day)
+
+```
+
+
+Calculate and report the total number of missing values in the dataset
+
+```{r}
+NA_MDF = sum(is.na(MDF))
+print("total number of missing values in the dataset")
+print(NA_MDF)
+```
+
+
+Average daily activity pattern
+Make a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+
+```{r av. daily activity pattern}
+step_int=as.numeric(levels(as.factor(MDF$interval)))
+
+for (i in 1:length(step_int)) {
+  Summary2[[i]]= summary(MDF[MDF$interval == step_int[i],] [,1], na.rm=T)
+}
+
+Mean_per_day.interval = unlist(lapply(Summary2,"[", 4))
+names(Mean_per_day.interval) = as.character(step_int)
+plot(x = step_int, y = Mean_per_day.interval , type="l", xlab = "Interval", ylab = "Mean number of steps per day & interval", main = "Mean nb. of steps par interval ovar all days")
+
+step_max=which(Mean_per_day.interval == max(Mean_per_day.interval))
+print(paste("Max activity at interval = ", MDF$interval[step_max] , " interval, which corresponds to ", round(step_max/12, 1), "hours", sep=""))
+```
+
+##PART B:  filling in all of the missing values in the dataset by REPLACING NAs by mean
+
+Replacing NA values in summary by zero if total nb of steps is zero for a given date
+```{r }
+SummaryB=NULL
+for (i in 1:length(Summary)) {
+   SummaryB[[i]] = ifelse(is.na(Summary[[i]]), 0, Summary[[i]])
+}
+```
+
+Filling in all of the missing values in the dataset:
+
+The mean for that day replaces the NA value, the new dataframe is stored as "MDFB" not to overwrite the original one
+  
+```{r}
+   # which(is.na(MDF$steps)==T)
+MDFB=MDF
+for (i in 1:length(SummaryB)) {
+   MDFB$steps=ifelse(is.na(MDFB$steps) & MDFB$date == levels(as.factor(MDFB$date))[i], SummaryB[[i]] [4], MDFB$steps)
+}
+```
+  
+
+Mean total number of steps taken per day after replacing NAs per mean : 'SPDB'
+```{r}
+tableB=table(MDFB$date)
+SPDB=NULL
+for (i in 1:length(tableB)) {
+        SPDB[i] = sum(MDFB[MDFB$date==names(tableB[i]),][,1],na.rm=T)    
+}
+barplot(SPDB, names.arg  = levels(MDFB$date), main = "Total number of steps taken per day (NA replaced)", xlab = "Total Steps",las=2 , cex.names=0.5)
+```
+
+Mean and median total number of steps taken per day  after replacing NAs per mean : 'SPDB'
+```{r}
+Mean_per_dayB=NULL; Median_per_dayB=NULL;SummaryB=NULL;SummaryB2=NULL
+ for (i in 1:length(tableB)) {
+     Mean_per_dayB[i] = round(mean(MDFB[MDFB$date==names(tableB[i]),][,1], na.rm=T),2) 
+     Median_per_dayB[i] = round(median(MDFB[MDFB$date==names(tableB[i]),][,1], na.rm=TRUE),2) 
+    SummaryB[[i]]= summary(MDFB[MDFB$date==names(tableB[i]),][,1], na.rm=T)
+ }
+Mean_per_dayB = unlist(lapply(SummaryB,"[", 4)); names(Mean_per_dayB) = levels(MDFB$date)
+Median_per_dayB = unlist(lapply(SummaryB,"[", 3)); names(Median_per_dayB) = levels(MDFB$date)
+
+print("Mean_per_day with NAs replaced by mean")
+print(Mean_per_dayB)
+
+print("Median_per_day with  NAs replaced by mean")
+print(Median_per_dayB)
+```
+
+Compare Means and Median with and whithout NAs being replaced by means on a given day: are they equal ?
+```{r compare Means and Median}
+print("Are Mean_per_day equal for each of the 61 days?")
+Mean_per_dayB == Mean_per_day
+
+print("Are Medium_per_day equal for each of the 61 days?")
+Median_per_dayB == Median_per_day
+
+```
+
+
+Total number of steps taken per day: after replacing NAs per mean : 'SPDB'
+```{r}
+tableB=table(MDFB$date)
+SPDB=NULL
+for (i in 1:length(tableB)) {
+   SPDB[i] = sum(MDFB[MDFB$date==names(tableB[i]),][,1],na.rm=T)    
+}
+
+par(mfrow=c(2,1) )
+barplot(SPD, names.arg  = levels(MDFB$date), main = "Total number of steps taken per day (without NA replacement)", xlab = "Total Steps",las=2 , cex.names=0.5, cex.main=0.6)
+barplot(SPDB, names.arg  = levels(MDFB$date), main = "Total number of steps taken per day (with NA replacement with mean at a given day)", xlab = "Total Steps",las=2 , cex.names=0.5, cex.main=0.6)
+
+SPDB == SPD
+
+```
+
+Indeed all NAs originate from unique days, in which case the total nb of steps is zero and there is no added steps in fine. 
+
+## Are there differences in activity patterns between weekdays and weekends?
+
+Create a new factor variable in the dataset with two levels – “weekday”
+and “weekend”
+
+```{r add weekdays, echo=TRUE}
+   # assign days to master data file
+MDFW=cbind(MDFB, weekdays(MDF$date))
+colnames(MDFW) [4] = "day"
+   #split into two dataframes for weekdays (MDFD) & for weekends (MDFE))
+MDFE=MDFW[(MDFW$day == "Saturday") | (MDFW$day == "Sunday"),]
+MDFD=MDFW[!(MDFW$day == "Saturday") & (!MDFW$day == "Sunday"),]
+```
+
+
+Make a panel plot containing a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis)
+```{r echo=TRUE}
+SummaryB2_E=NULL; SummaryB2_D = NULL 
+for (i in 1:length(step_int)) {
+   SummaryB2_E[[i]]= summary(MDFE[MDFE$interval == step_int[i],] [,1], na.rm=T)
+   SummaryB2_D[[i]]= summary(MDFD[MDFD$interval == step_int[i],] [,1], na.rm=T)
+}
+
+Mean_per_day.interval_E = unlist(lapply(SummaryB2_E,"[", 4))
+names(Mean_per_day.interval_E) = as.character(step_int)
+Mean_per_day.interval_D = unlist(lapply(SummaryB2_D,"[", 4))
+names(Mean_per_day.interval_D) = as.character(step_int)
+
+par(mfrow=c(2,1))
+plot(x = step_int, y = Mean_per_day.interval_E , type="l", xlab = "Interval", ylab = "Mean number of steps", main = "Mean number of steps per day & interval on Weekends",cex.main=0.6, cex.lab= 0.6, ylim=c(0,200))
+plot(x = step_int, y = Mean_per_day.interval_D , type="l", xlab = "Interval", ylab = "Mean number of steps", main = "Mean nb. of steps par interval over all days on weekdays",cex.main=0.6, cex.lab= 0.6,  ylim=c(0,200))
+
+step_max_B=which(Mean_per_day.interval == max(Mean_per_day.interval))
+```
+
+Activity is overall higher on Weekends. The strong activity peak happens around 2 PM  on weekdays and is well marked unlike on weeg ends where activity is spreadout over the day from approx 10 AM to 7 PM
+
+
